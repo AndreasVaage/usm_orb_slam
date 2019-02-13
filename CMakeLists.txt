@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(orb_slam2_ros)
-
+set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 IF(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release)
 ENDIF()
