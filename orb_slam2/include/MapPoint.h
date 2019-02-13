@@ -109,6 +109,9 @@ public:
     cv::Mat mPosGBA;
     long unsigned int mnBAGlobalForKF;
 
+    // Variables used by classification
+    int16_t classification[2] = {0};
+
 
     static std::mutex mGlobalMutex;
 
