@@ -6,6 +6,7 @@ The original implementation can be found [here](https://github.com/raulmur/ORB_S
 This is the ROS implementation of the ORB-SLAM2 real-time SLAM library for **Monocular**, **Stereo** and **RGB-D** cameras that computes the camera trajectory and a sparse 3D reconstruction (in the stereo and RGB-D case with true scale). It is able to detect loops and relocalize the camera in real time. This implementation removes the Pangolin dependency, and the original viewer. All data I/O is handled via ROS topics. For vizualization you can use RViz. This repository is maintained by [Lennart Haller](http://lennarthaller.de) on behalf of [appliedAI](http://appliedai.de).
 ## Features
 - Full ROS compatibility
+- Supports the Intel RealSense R200 and D435 out of the box
 - Data I/O via ROS topics
 - Parameters can be set with the rqt_reconfigure gui during runtime
 - Very quick startup through considerably sped up vocab file loading
@@ -128,9 +129,22 @@ source devel/setup.bash
 ```
 you can run the the corresponding nodes with one of the following commands:
 ```
-roslaunch orb_slam2_ros orb_slam2_mono.launch
-roslaunch orb_slam2_ros orb_slam2_stereo.launch
-roslaunch orb_slam2_ros orb_slam2_rgbd.launch
+roslaunch orb_slam2_ros orb_slam2_r200_mono.launch
+roslaunch orb_slam2_ros orb_slam2_r200_stereo.launch
+roslaunch orb_slam2_ros orb_slam2_r200_rgbd.launch
+roslaunch orb_slam2_ros orb_slam2_d435_mono.launch
+roslaunch orb_slam2_ros orb_slam2_d435_rgbd.launch
+```
+# 5. FAQ
+The node for the RealSense fails to launch when running
+```
+roslaunch realsense2_camera rs_rgbd.launch
+```
+to get the depth stream.
+**Solution:**
+install the rgbd-launch package with the command (make sure to adjust the ROS distro if needed):
+```
+sudo apt install ros-melodic-rgbd-launch
 ```
 
 
