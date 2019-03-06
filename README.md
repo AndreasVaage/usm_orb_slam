@@ -66,9 +66,25 @@ sudo apt install libeigen3-dev
 ```
 **Required at least 3.1.0**.
 
-## DBoW2 and g2o (Included in orb_slam2/Thirdparty)
-We use modified versions of the [DBoW2](https://github.com/dorian3d/DBoW2) library to perform place recognition and [g2o](https://github.com/RainerKuemmerle/g2o) library to perform non-linear optimizations. Both modified libraries (which are BSD) are included in the *Thirdparty* folder.
+## g2o
 
+We use [g2o](https://github.com/RainerKuemmerle/g2o) library to perform non-linear optimizations.
+To include newer updates and fixes g2o no longer ships with orb-slam, but are added as a build dependencie.
+Installation:
+```
+git clone https://github.com/RainerKuemmerle/g2o.git
+
+mkdir g2o/build
+cd g2o/build
+cmake ../
+make
+sudo make install
+```
+
+
+## DBoW2 (Included in orb_slam2/Thirdparty)
+We use modified versions of the [DBoW2](https://github.com/dorian3d/DBoW2) library to perform place recognition. It is BSD and are included in the *Thirdparty* folder.
+  
 ## ROS / catkin
 This ROS node requires catkin_make_isolated or catkin build to build.
 
