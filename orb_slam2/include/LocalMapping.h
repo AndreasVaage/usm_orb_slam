@@ -28,6 +28,7 @@
 #include "KeyFrameDatabase.h"
 
 #include <mutex>
+#include "IMU/configparam.h"
 
 
 namespace ORB_SLAM2
@@ -40,7 +41,68 @@ class Map;
 class LocalMapping
 {
 public:
-    LocalMapping(Map* pMap, const float bMonocular);
+    ConfigParam* mpParams;
+
+    // KeyFrames in Local Window, for Local BA
+    // Insert in ProcessNewKeyFrame()
+    void AddToLocalWindow(KeyFrame* pKF);
+    void DeleteBadInLocalWindow(void);
+
+    void VINSInitThread(void);
+    bool TryInitVIO(void);
+    bool GetVINSInited(void);
+    void SetVINSInited(bool flag);
+
+    bool GetFirstVINSInited(void);
+    void SetFirstVINSInited(bool flag);
+
+    cv::Mat GetGravityVec(void);
+    cv::Mat GetRwiInit(void);
+
+    bool GetMapUpdateFlagForTracking();
+    void SetMapUpdateFlagInTracking(bool bflag);
+    KeyFrame* GetMapUpdateKF();
+
+    const KeyFrame* GetCurrentKF(void) const {return mpCurrentKeyFrame;}
+
+    std::mutex mMutexUpdatingInitPoses;
+    bool GetUpdatingInitPoses(void);
+    void SetUpdatingInitPoses(bool flag);
+
+    std::mutex mMutexInitGBAFinish;
+    bool mbInitGBAFinish;
+    bool GetFlagInitGBAFinish() { unique_lock<mutex> lock(mMutexInitGBAFinish); return mbInitGBAFinish; }
+    void SetFlagInitGBAFinish(bool flag) { unique_lock<mutex> lock(mMutexInitGBAFinish); mbInitGBAFinish = flag; }
+
+protected:
+    double mnStartTime;
+    bool mbFirstTry;
+    double mnVINSInitScale;
+    cv::Mat mGravityVec; // gravity vector in world frame
+    cv::Mat mRwiInit;
+
+    std::mutex mMutexVINSInitFlag;
+    bool mbVINSInited;
+
+    std::mutex mMutexFirstVINSInitFlag;
+    bool mbFirstVINSInited;
+
+    unsigned int mnLocalWindowSize;
+    std::list<KeyFrame*> mlLocalKeyFrames;
+
+    std::mutex mMutexMapUpdateFlag;
+    bool mbMapUpdateFlagForTracking;
+    KeyFrame* mpMapUpdateKF;
+
+    bool mbUpdatingInitPoses;
+
+    std::mutex mMutexCopyInitKFs;
+    bool mbCopyInitKFs;
+    bool GetFlagCopyInitKFs() { unique_lock<mutex> lock(mMutexCopyInitKFs); return mbCopyInitKFs; }
+    void SetFlagCopyInitKFs(bool flag) { unique_lock<mutex> lock(mMutexCopyInitKFs); mbCopyInitKFs = flag; }
+
+public:
+    LocalMapping(Map* pMap, const float bMonocular, ConfigParam* pParams);
 
     void SetLoopCloser(LoopClosing* pLoopCloser);
 

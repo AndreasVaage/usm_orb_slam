@@ -27,11 +27,18 @@
 #include<g2o/types/sba/types_six_dof_expmap.h>
 #include<g2o/types/sim3/types_seven_dof_expmap.h>
 
+#include "IMU/IMUPreintegrator.h"
+#include "IMU/NavState.h"
+
 namespace ORB_SLAM2
 {
 
 class Converter
 {
+public:
+    static void updateNS(NavState& ns, const IMUPreintegrator& imupreint, const Vector3d& gw);
+    static cv::Mat toCvMatInverse(const cv::Mat &T12);
+
 public:
     static std::vector<cv::Mat> toDescriptorVector(const cv::Mat &Descriptors);
 

@@ -35,11 +35,29 @@
 namespace ORB_SLAM2
 {
 
-LoopClosing::LoopClosing(Map *pMap, KeyFrameDatabase *pDB, ORBVocabulary *pVoc, const bool bFixScale):
+bool LoopClosing::GetMapUpdateFlagForTracking()
+{
+    unique_lock<mutex> lock(mMutexMapUpdateFlag);
+    return mbMapUpdateFlagForTracking;
+}
+
+void LoopClosing::SetMapUpdateFlagInTracking(bool bflag)
+{
+    unique_lock<mutex> lock(mMutexMapUpdateFlag);
+    mbMapUpdateFlagForTracking = bflag;
+}
+
+//-------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+
+LoopClosing::LoopClosing(Map *pMap, KeyFrameDatabase *pDB, ORBVocabulary *pVoc, const bool bFixScale, ConfigParam* pParams):
     mbResetRequested(false), mbFinishRequested(false), mbFinished(true), mpMap(pMap),
     mpKeyFrameDB(pDB), mpORBVocabulary(pVoc), mpMatchedKF(NULL), mLastLoopKFid(0), mbRunningGBA(false), mbFinishedGBA(true),
     mbStopGBA(false), mpThreadGBA(NULL), mbFixScale(bFixScale), mnFullBAIdx(false)
 {
+    mpParams = pParams;
+
     mnCovisibilityConsistencyTh = 3;
 }
 
@@ -66,13 +84,16 @@ void LoopClosing::Run()
             // Detect loop candidates and check covisibility consistency
             if(DetectLoop())
             {
-               // Compute similarity transformation [sR|t]
-               // In the stereo/RGBD case s=1
-               if(ComputeSim3())
-               {
-                   // Perform loop fusion and pose graph optimization
-                   CorrectLoop();
-               }
+                if(mpLocalMapper->GetVINSInited())
+                {
+                    // Compute similarity transformation [sR|t]
+                    // In the stereo/RGBD case s=1
+                    if(ComputeSim3())
+                    {
+                        // Perform loop fusion and pose graph optimization
+                        CorrectLoop();
+                    }
+                }
             }
         }
 
@@ -410,16 +431,18 @@ void LoopClosing::CorrectLoop()
     // If a Global Bundle Adjustment is running, abort it
     if(isRunningGBA())
     {
+        cout<<"Abort last global BA..."<<endl;
         unique_lock<mutex> lock(mMutexGBA);
         mbStopGBA = true;
 
-        mnFullBAIdx = true;
+        mnFullBAIdx++;
 
         if(mpThreadGBA)
         {
             mpThreadGBA->detach();
             delete mpThreadGBA;
         }
+        cout<<"Last global BA aborted."<<endl;
     }
 
     // Wait until Local Mapping has effectively stopped
@@ -564,8 +587,10 @@ void LoopClosing::CorrectLoop()
     }
 
     // Optimize graph
-    Optimizer::OptimizeEssentialGraph(mpMap, mpMatchedKF, mpCurrentKF, NonCorrectedSim3, CorrectedSim3, LoopConnections, mbFixScale);
+    Optimizer::OptimizeEssentialGraph(mpMap, mpMatchedKF, mpCurrentKF, NonCorrectedSim3, CorrectedSim3, LoopConnections, mbFixScale, this);
 
+    // Map updated, set flag for Tracking
+    SetMapUpdateFlagInTracking(true);
     mpMap->InformNewBigChange();
 
     // Add loop edge
@@ -646,8 +671,9 @@ void LoopClosing::RunGlobalBundleAdjustment(unsigned long nLoopKF)
 {
     cout << "Starting Global Bundle Adjustment" << endl;
 
-    bool idx =  mnFullBAIdx;
-    Optimizer::GlobalBundleAdjustemnt(mpMap,10,&mbStopGBA,nLoopKF,false);
+    int idx =  mnFullBAIdx;
+    //Optimizer::GlobalBundleAdjustemnt(mpMap,10,&mbStopGBA,nLoopKF,false);
+    Optimizer::GlobalBundleAdjustmentNavStatePRV(mpMap,mpLocalMapper->GetGravityVec(),10,&mbStopGBA,nLoopKF,false);
 
     // Update all MapPoints and KeyFrames
     // Local Mapping was active during BA, that means that there might be new keyframes
@@ -670,6 +696,8 @@ void LoopClosing::RunGlobalBundleAdjustment(unsigned long nLoopKF)
                 std::this_thread::sleep_for(std::chrono::microseconds(1000));
             }
 
+            cv::Mat cvTbc = ConfigParam::GetMatTbc();
+
             // Get Map Mutex
             unique_lock<mutex> lock(mpMap->mMutexMapUpdate);
 
@@ -690,12 +718,27 @@ void LoopClosing::RunGlobalBundleAdjustment(unsigned long nLoopKF)
                         pChild->mTcwGBA = Tchildc*pKF->mTcwGBA;//*Tcorc*pKF->mTcwGBA;
                         pChild->mnBAGlobalForKF=nLoopKF;
 
+                        // Set NavStateGBA and correct the P/V/R
+                        pChild->mNavStateGBA = pChild->GetNavState();
+                        cv::Mat TwbGBA = Converter::toCvMatInverse(cvTbc*pChild->mTcwGBA);
+                        Matrix3d RwbGBA = Converter::toMatrix3d(TwbGBA.rowRange(0,3).colRange(0,3));
+                        Vector3d PwbGBA = Converter::toVector3d(TwbGBA.rowRange(0,3).col(3));
+                        Matrix3d Rw1 = pChild->mNavStateGBA.Get_RotMatrix();
+                        Vector3d Vw1 = pChild->mNavStateGBA.Get_V();
+                        Vector3d Vw2 = RwbGBA*Rw1.transpose()*Vw1;   // bV1 = bV2 ==> Rwb1^T*wV1 = Rwb2^T*wV2 ==> wV2 = Rwb2*Rwb1^T*wV1
+                        pChild->mNavStateGBA.Set_Pos(PwbGBA);
+                        pChild->mNavStateGBA.Set_Rot(RwbGBA);
+                        pChild->mNavStateGBA.Set_Vel(Vw2);
                     }
                     lpKFtoCheck.push_back(pChild);
                 }
 
                 pKF->mTcwBefGBA = pKF->GetPose();
-                pKF->SetPose(pKF->mTcwGBA);
+                //pKF->SetPose(pKF->mTcwGBA);
+                pKF->mNavStateBefGBA = pKF->GetNavState();
+                pKF->SetNavState(pKF->mNavStateGBA);
+                pKF->UpdatePoseFromNS(cvTbc);
+
                 lpKFtoCheck.pop_front();
             }
 
@@ -741,6 +784,9 @@ void LoopClosing::RunGlobalBundleAdjustment(unsigned long nLoopKF)
             mpLocalMapper->Release();
 
             cout << "Map updated!" << endl;
+
+            // Map updated, set flag for Tracking
+            SetMapUpdateFlagInTracking(true);
         }
 
         mbFinishedGBA = true;

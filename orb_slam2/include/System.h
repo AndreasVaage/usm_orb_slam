@@ -35,6 +35,8 @@
 #include "KeyFrameDatabase.h"
 #include "ORBVocabulary.h"
 
+#include "IMU/imudata.h"
+
 namespace ORB_SLAM2
 {
 class FrameDrawer;
@@ -45,6 +47,10 @@ class LoopClosing;
 
 class System
 {
+public:
+    bool bLocalMapAcceptKF(void);
+    void SaveKeyFrameTrajectoryNavState(const string& filename);
+
 public:
     // Input sensor
     enum eSensor{
@@ -73,6 +79,7 @@ public:
     // Input images: RGB (CV_8UC3) or grayscale (CV_8U). RGB is converted to grayscale.
     // Returns the camera pose (empty if tracking fails).
     void TrackMonocular(const cv::Mat &im, const double &timestamp);
+    void TrackMonoVI(const cv::Mat &im, const std::vector<IMUData> &vimu, const double &timestamp);
 
     // Returns true if there have been a big map change (loop closure, global BA)
     // since last call to this function
@@ -164,7 +171,7 @@ private:
     // The Tracking thread "lives" in the main execution thread that creates the System object.
     std::thread* mptLocalMapping;
     std::thread* mptLoopClosing;
-
+    std::thread* mptLocalMappingVIOInit;
     // Reset flag
     std::mutex mMutexReset;
     bool mbReset;

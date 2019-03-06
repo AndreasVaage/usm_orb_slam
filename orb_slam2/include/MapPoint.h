@@ -35,6 +35,12 @@ class KeyFrame;
 class Map;
 class Frame;
 
+class cmpKeyFrameId{
+public:
+    bool operator() (const KeyFrame* a, const KeyFrame* b) const ;
+};
+
+typedef std::map<KeyFrame*,size_t,cmpKeyFrameId> mapMapPointObs;
 
 class MapPoint
 {
@@ -43,12 +49,13 @@ public:
     MapPoint(const cv::Mat &Pos,  Map* pMap, Frame* pFrame, const int &idxF);
 
     void SetWorldPos(const cv::Mat &Pos);
+    void UpdateScale(float scale);
     cv::Mat GetWorldPos();
 
     cv::Mat GetNormal();
     KeyFrame* GetReferenceKeyFrame();
 
-    std::map<KeyFrame*,size_t> GetObservations();
+    mapMapPointObs/*std::map<KeyFrame*,size_t>*/ GetObservations();
     int Observations();
 
     void AddObservation(KeyFrame* pKF,size_t idx);
@@ -121,7 +128,7 @@ protected:
      cv::Mat mWorldPos;
 
      // Keyframes observing the point and associated index in keyframe
-     std::map<KeyFrame*,size_t> mObservations;
+     mapMapPointObs/*std::map<KeyFrame*,size_t,cmpMapPointId>*/ mObservations;
 
      // Mean viewing direction
      cv::Mat mNormalVector;

@@ -32,6 +32,181 @@ float Frame::cx, Frame::cy, Frame::fx, Frame::fy, Frame::invfx, Frame::invfy;
 float Frame::mnMinX, Frame::mnMinY, Frame::mnMaxX, Frame::mnMaxY;
 float Frame::mfGridElementWidthInv, Frame::mfGridElementHeightInv;
 
+
+
+//-------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+
+void Frame::ComputeIMUPreIntSinceLastFrame(const Frame* pLastF, IMUPreintegrator& IMUPreInt) const
+{
+    // Reset pre-integrator first
+    IMUPreInt.reset();
+
+    const std::vector<IMUData>& vIMUSInceLastFrame = mvIMUDataSinceLastFrame;
+
+    Vector3d bg = pLastF->GetNavState().Get_BiasGyr();
+    Vector3d ba = pLastF->GetNavState().Get_BiasAcc();
+
+    // remember to consider the gap between the last KF and the first IMU
+    {
+        const IMUData& imu = vIMUSInceLastFrame.front();
+        double dt = imu._t - pLastF->mTimeStamp;
+        IMUPreInt.update(imu._g - bg, imu._a - ba, dt);
+
+        // Test log
+        if(dt < 0)
+        {
+            cerr<<std::fixed<<std::setprecision(3)<<"dt = "<<dt<<", this frame vs last imu time: "<<pLastF->mTimeStamp<<" vs "<<imu._t<<endl;
+            std::cerr.unsetf ( std::ios::showbase );                // deactivate showbase
+        }
+    }
+    // integrate each imu
+    for(size_t i=0; i<vIMUSInceLastFrame.size(); i++)
+    {
+        const IMUData& imu = vIMUSInceLastFrame[i];
+        double nextt;
+        if(i==vIMUSInceLastFrame.size()-1)
+            nextt = mTimeStamp;         // last IMU, next is this KeyFrame
+        else
+            nextt = vIMUSInceLastFrame[i+1]._t;  // regular condition, next is imu data
+
+        // delta time
+        double dt = nextt - imu._t;
+        // update pre-integrator
+        IMUPreInt.update(imu._g - bg, imu._a - ba, dt);
+
+        // Test log
+        if(dt <= 0)
+        {
+            cerr<<std::fixed<<std::setprecision(3)<<"dt = "<<dt<<", this vs next time: "<<imu._t<<" vs "<<nextt<<endl;
+            std::cerr.unsetf ( std::ios::showbase );                // deactivate showbase
+        }
+    }
+}
+
+void Frame::UpdatePoseFromNS(const cv::Mat &Tbc)
+{
+    cv::Mat Rbc = Tbc.rowRange(0,3).colRange(0,3).clone();
+    cv::Mat Pbc = Tbc.rowRange(0,3).col(3).clone();
+
+    cv::Mat Rwb = Converter::toCvMat(mNavState.Get_RotMatrix());
+    cv::Mat Pwb = Converter::toCvMat(mNavState.Get_P());
+
+    cv::Mat Rcw = (Rwb*Rbc).t();
+    cv::Mat Pwc = Rwb*Pbc + Pwb;
+    cv::Mat Pcw = -Rcw*Pwc;
+
+    cv::Mat Tcw = cv::Mat::eye(4,4,CV_32F);
+    Rcw.copyTo(Tcw.rowRange(0,3).colRange(0,3));
+    Pcw.copyTo(Tcw.rowRange(0,3).col(3));
+
+    SetPose(Tcw);
+}
+
+void Frame::UpdateNavState(const IMUPreintegrator& imupreint, const Vector3d& gw)
+{
+    Converter::updateNS(mNavState,imupreint,gw);
+}
+
+const NavState& Frame::GetNavState(void) const
+{
+    return mNavState;
+}
+
+void Frame::SetInitialNavStateAndBias(const NavState& ns)
+{
+    mNavState = ns;
+    // Set bias as bias+delta_bias, and reset the delta_bias term
+    mNavState.Set_BiasGyr(ns.Get_BiasGyr()+ns.Get_dBias_Gyr());
+    mNavState.Set_BiasAcc(ns.Get_BiasAcc()+ns.Get_dBias_Acc());
+    mNavState.Set_DeltaBiasGyr(Vector3d::Zero());
+    mNavState.Set_DeltaBiasAcc(Vector3d::Zero());
+}
+
+
+void Frame::SetNavStateBiasGyr(const Vector3d &bg)
+{
+    mNavState.Set_BiasGyr(bg);
+}
+
+void Frame::SetNavStateBiasAcc(const Vector3d &ba)
+{
+    mNavState.Set_BiasAcc(ba);
+}
+
+void Frame::SetNavState(const NavState& ns)
+{
+    mNavState = ns;
+}
+
+Frame::Frame(const cv::Mat &imGray, const double &timeStamp, const std::vector<IMUData> &vimu, ORBextractor* extractor,ORBVocabulary* voc,
+             cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth, KeyFrame* pLastKF)
+    :mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
+     mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth)
+{
+    // Copy IMU data
+    mvIMUDataSinceLastFrame = vimu;
+
+    // Frame ID
+    mnId=nNextId++;
+
+    // Scale Level Info
+    mnScaleLevels = mpORBextractorLeft->GetLevels();
+    mfScaleFactor = mpORBextractorLeft->GetScaleFactor();
+    mfLogScaleFactor = log(mfScaleFactor);
+    mvScaleFactors = mpORBextractorLeft->GetScaleFactors();
+    mvInvScaleFactors = mpORBextractorLeft->GetInverseScaleFactors();
+    mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();
+    mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
+
+    // ORB extraction
+    ExtractORB(0,imGray);
+
+    N = mvKeys.size();
+
+    if(mvKeys.empty())
+        return;
+
+    UndistortKeyPoints();
+
+    // Set no stereo information
+    mvuRight = vector<float>(N,-1);
+    mvDepth = vector<float>(N,-1);
+
+    mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));
+    mvbOutlier = vector<bool>(N,false);
+
+    // This is done only for the first Frame (or after a change in the calibration)
+    if(mbInitialComputations)
+    {
+        ComputeImageBounds(imGray);
+
+        mfGridElementWidthInv=static_cast<float>(FRAME_GRID_COLS)/static_cast<float>(mnMaxX-mnMinX);
+        mfGridElementHeightInv=static_cast<float>(FRAME_GRID_ROWS)/static_cast<float>(mnMaxY-mnMinY);
+
+        fx = K.at<float>(0,0);
+        fy = K.at<float>(1,1);
+        cx = K.at<float>(0,2);
+        cy = K.at<float>(1,2);
+        invfx = 1.0f/fx;
+        invfy = 1.0f/fy;
+
+        mbInitialComputations=false;
+    }
+
+    mb = mbf/fx;
+
+    AssignFeaturesToGrid();
+}
+
+
+
+
+//-------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+
 Frame::Frame()
 {}
 
@@ -55,6 +230,11 @@ Frame::Frame(const Frame &frame)
 
     if(!frame.mTcw.empty())
         SetPose(frame.mTcw);
+
+    mvIMUDataSinceLastFrame = frame.mvIMUDataSinceLastFrame;
+    mNavState = frame.GetNavState();
+    mMargCovInv = frame.mMargCovInv;
+    mNavStatePrior = frame.mNavStatePrior;
 }
 
 

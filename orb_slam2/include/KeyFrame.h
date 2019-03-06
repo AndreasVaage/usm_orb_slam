@@ -30,7 +30,9 @@
 #include "KeyFrameDatabase.h"
 
 #include <mutex>
-
+#include "IMU/imudata.h"
+#include "IMU/NavState.h"
+#include "IMU/IMUPreintegrator.h"
 
 namespace ORB_SLAM2
 {
@@ -42,6 +44,58 @@ class KeyFrameDatabase;
 
 class KeyFrame
 {
+public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+    KeyFrame(Frame &F, Map* pMap, KeyFrameDatabase* pKFDB, std::vector<IMUData> vIMUData, KeyFrame* pLastKF=NULL);
+    KeyFrame* GetPrevKeyFrame(void);
+    KeyFrame* GetNextKeyFrame(void);
+    void SetPrevKeyFrame(KeyFrame* pKF);
+    void SetNextKeyFrame(KeyFrame* pKF);
+
+    std::vector<IMUData> GetVectorIMUData(void);
+    void AppendIMUDataToFront(KeyFrame* pPrevKF);
+    void ComputePreInt(void);
+
+    const IMUPreintegrator & GetIMUPreInt(void);
+
+    void UpdateNavStatePVRFromTcw(const cv::Mat &Tcw,const cv::Mat &Tbc);
+    void UpdatePoseFromNS(const cv::Mat &Tbc);
+    void UpdateNavState(const IMUPreintegrator& imupreint, const Vector3d& gw);
+    void SetNavState(const NavState& ns);
+    const NavState& GetNavState(void);
+    void SetNavStateVel(const Vector3d &vel);
+    void SetNavStatePos(const Vector3d &pos);
+    void SetNavStateRot(const Matrix3d &rot);
+    void SetNavStateRot(const Sophus::SO3 &rot);
+    void SetNavStateBiasGyr(const Vector3d &bg);
+    void SetNavStateBiasAcc(const Vector3d &ba);
+    void SetNavStateDeltaBg(const Vector3d &dbg);
+    void SetNavStateDeltaBa(const Vector3d &dba);
+
+    void SetInitialNavStateAndBias(const NavState& ns);
+
+    // Variables used by loop closing
+    NavState mNavStateGBA;       //mTcwGBA
+    NavState mNavStateBefGBA;    //mTcwBefGBA
+
+protected:
+
+    std::mutex mMutexPrevKF;
+    std::mutex mMutexNextKF;
+    KeyFrame* mpPrevKeyFrame;
+    KeyFrame* mpNextKeyFrame;
+
+    // P, V, R, bg, ba, delta_bg, delta_ba (delta_bx is for optimization update)
+    std::mutex mMutexNavState;
+    NavState mNavState;
+
+    // IMU Data from lask KeyFrame to this KeyFrame
+    std::mutex mMutexIMUData;
+    std::vector<IMUData> mvIMUData;
+    IMUPreintegrator mIMUPreInt;
+
+
 public:
     KeyFrame(Frame &F, Map* pMap, KeyFrameDatabase* pKFDB);
 
@@ -231,6 +285,7 @@ protected:
     std::mutex mMutexPose;
     std::mutex mMutexConnections;
     std::mutex mMutexFeatures;
+
 };
 
 } //namespace ORB_SLAM

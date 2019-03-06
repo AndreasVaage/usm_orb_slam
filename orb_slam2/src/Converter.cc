@@ -24,6 +24,44 @@
 namespace ORB_SLAM2
 {
 
+void Converter::updateNS(NavState& ns, const IMUPreintegrator& imupreint, const Vector3d& gw)
+{
+    Matrix3d dR = imupreint.getDeltaR();
+    Vector3d dP = imupreint.getDeltaP();
+    Vector3d dV = imupreint.getDeltaV();
+    double dt = imupreint.getDeltaTime();
+
+    Vector3d Pwbpre = ns.Get_P();
+    Matrix3d Rwbpre = ns.Get_RotMatrix();
+    Vector3d Vwbpre = ns.Get_V();
+
+    Matrix3d Rwb = Rwbpre * dR;
+    Vector3d Pwb = Pwbpre + Vwbpre*dt + 0.5*gw*dt*dt + Rwbpre*dP;
+    Vector3d Vwb = Vwbpre + gw*dt + Rwbpre*dV;
+
+    // Here assume that the pre-integration is re-computed after bias updated, so the bias term is ignored
+    ns.Set_Pos(Pwb);
+    ns.Set_Vel(Vwb);
+    ns.Set_Rot(Rwb);
+
+    // Test log
+    if(ns.Get_dBias_Gyr().norm()>1e-6 || ns.Get_dBias_Acc().norm()>1e-6) std::cerr<<"delta bias in updateNS is not zero"<<ns.Get_dBias_Gyr().transpose()<<", "<<ns.Get_dBias_Acc().transpose()<<std::endl;
+}
+
+cv::Mat Converter::toCvMatInverse(const cv::Mat &Tcw)
+{
+    cv::Mat Rcw = Tcw.rowRange(0,3).colRange(0,3);
+    cv::Mat tcw = Tcw.rowRange(0,3).col(3);
+    cv::Mat Rwc = Rcw.t();
+    cv::Mat twc = -Rwc*tcw;
+
+    cv::Mat Twc = cv::Mat::eye(4,4,Tcw.type());
+    Rwc.copyTo(Twc.rowRange(0,3).colRange(0,3));
+    twc.copyTo(Twc.rowRange(0,3).col(3));
+
+    return Twc.clone();
+}
+
 std::vector<cv::Mat> Converter::toDescriptorVector(const cv::Mat &Descriptors)
 {
     std::vector<cv::Mat> vDesc;
