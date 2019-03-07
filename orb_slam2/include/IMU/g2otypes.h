@@ -1,14 +1,16 @@
 #ifndef G2OTYPES_H
 #define G2OTYPES_H
 
-#include "Thirdparty/g2o/g2o/core/base_vertex.h"
-#include "Thirdparty/g2o/g2o/core/base_unary_edge.h"
+#include <g2o/core/base_vertex.h>
+#include <g2o/core/base_unary_edge.h>
+#include <g2o/core/base_multi_edge.h>
+#include <g2o/core/base_binary_edge.h>
+#include <g2o/types/sba/types_six_dof_expmap.h>
+
 #include "so3.h"
 #include "NavState.h"
 #include "IMUPreintegrator.h"
-#include "Thirdparty/g2o/g2o/core/base_multi_edge.h"
-#include "Thirdparty/g2o/g2o/core/base_binary_edge.h"
-#include "Thirdparty/g2o/g2o/types/types_six_dof_expmap.h"
+
 //#include "Thirdparty/g2o/g2o/core/sparse_block_matrix.h"
 
 namespace g2o

@@ -37,6 +37,7 @@ endif()
 
 find_package(Eigen3 3.1.0 REQUIRED)
 find_package(G2O REQUIRED)
+find_package(Cholmod REQUIRED)
 
 set (DYNAMIC_RECONFIGURE_PATH ros/config/dynamic_reconfigure.cfg)
 execute_process(COMMAND chmod a+x ${DYNAMIC_RECONFIGURE_PATH}
@@ -59,6 +60,8 @@ set(LIBS_ORBSLAM
 ${OpenCV_LIBS}
 ${EIGEN3_LIBS}
 ${G2O_LIBS}
+cholmod
+${CHOLMOD_LIBRARIES}
 ${PROJECT_SOURCE_DIR}/orb_slam2/Thirdparty/DBoW2/lib/libDBoW2.so
 #${PROJECT_SOURCE_DIR}/orb_slam2/Thirdparty/g2o/lib/libg2o.so
 )
@@ -81,6 +84,7 @@ ${PROJECT_SOURCE_DIR}/ros/include
 ${EIGEN3_INCLUDE_DIR}
 ${catkin_INCLUDE_DIRS}
 ${G20_INCLUDE_DIR}
+${CHOLMOD_INCLUDE_DIR}
 )
 
 include(${PROJECT_SOURCE_DIR}/orb_slam2/Thirdparty/DBoW2/CMakeLists.txt)
@@ -106,7 +110,15 @@ orb_slam2/src/Frame.cc
 orb_slam2/src/KeyFrameDatabase.cc
 orb_slam2/src/Sim3Solver.cc
 orb_slam2/src/Initializer.cc
+
+orb_slam2/src/IMU/configparam.cpp
+orb_slam2/src/IMU/imudata.cpp
+orb_slam2/src/IMU/IMUPreintegrator.cpp
+orb_slam2/src/IMU/so3.cpp
+orb_slam2/src/IMU/NavState.cpp
+orb_slam2/src/IMU/g2otypes.cpp
 )
+
 add_dependencies (${PROJECT_NAME} DBoW2)
 
 target_link_libraries(${PROJECT_NAME}

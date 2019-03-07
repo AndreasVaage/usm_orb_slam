@@ -38,7 +38,8 @@
 #include "IMU/g2otypes.h"
 #include "g2o/core/optimization_algorithm_gauss_newton.h"
 #include "g2o/core/optimization_algorithm_with_hessian.h"
-#include "g2o/solvers/linear_solver_cholmod.h"
+#include <g2o/solvers/cholmod/linear_solver_cholmod.h>
+
 
 namespace ORB_SLAM2
 {
@@ -2012,7 +2013,7 @@ int Optimizer::PoseOptimization(Frame *pFrame, Frame* pLastFrame, const IMUPrein
         margVerteces.push_back(optimizer.vertex(FramePVRId));
         margVerteces.push_back(optimizer.vertex(FrameBiasId));
 
-        g2o::SparseBlockMatrixXd spinv;
+        g2o::SparseBlockMatrixX spinv;
         optimizer.computeMarginals(spinv, margVerteces);
         // spinv include 2 blocks, 9x9-(0,0) for PVR, 6x6-(1,1) for Bias
         Matrix<double,15,15> margCov = Matrix<double,15,15>::Zero();
@@ -2280,7 +2281,7 @@ int Optimizer::PoseOptimization(Frame *pFrame, KeyFrame* pLastKF, const IMUPrein
         margVerteces.push_back(optimizer.vertex(FrameBiasId));
 
         //TODO: how to get the joint marginalized covariance of PVR&Bias
-        g2o::SparseBlockMatrixXd spinv;
+        g2o::SparseBlockMatrixX spinv;
         optimizer.computeMarginals(spinv, margVerteces);
         // spinv include 2 blocks, 9x9-(0,0) for PVR, 6x6-(1,1) for Bias
         Matrix<double,15,15> margCovInv = Matrix<double,15,15>::Zero();

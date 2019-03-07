@@ -1,4 +1,4 @@
-#include "g2otypes.h"
+#include "IMU/g2otypes.h"
 
 namespace g2o
 {
