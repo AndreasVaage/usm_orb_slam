@@ -25,6 +25,7 @@ image_transport
 tf
 sensor_msgs
 dynamic_reconfigure
+rosbag
 )
 
 find_package(OpenCV 3.0 QUIET)
@@ -123,6 +124,16 @@ add_dependencies (${PROJECT_NAME} DBoW2)
 
 target_link_libraries(${PROJECT_NAME}
 ${LIBS_ORBSLAM}
+)
+
+add_executable (${PROJECT_NAME}_vio
+ros/src/ros_vio.cc
+ros/src/MsgSynchronizer.cc
+)
+add_dependencies (${PROJECT_NAME}_vio ${PROJECT_NAME} ${PROJECT_NAME}_gencfg)
+
+target_link_libraries(${PROJECT_NAME}_vio
+${LIBS_ROS}
 )
 
 add_executable (${PROJECT_NAME}_mono

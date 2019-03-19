@@ -1,0 +1,11 @@
+<launch>
+
+ 	<node  name="orb_slam2_ros_vio" pkg="orb_slam2_ros"
+		  type="orb_slam2_ros_vio" args="
+		  $(find orb_slam2_ros)/orb_slam2/Vocabulary/ORBvoc.txt
+		  $(find orb_slam2_ros)/orb_slam2/config/euroc.yaml"
+		  cwd="node"
+		  output="screen">
+	</node>
+
+</launch>
