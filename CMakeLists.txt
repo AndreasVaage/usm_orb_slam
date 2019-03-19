@@ -128,6 +128,7 @@ ${LIBS_ORBSLAM}
 add_executable (${PROJECT_NAME}_mono
 ros/src/MonoNode.cc
 ros/src/Node.cc
+ros/src/MsgSynchronizer.cc
 )
 add_dependencies (${PROJECT_NAME}_mono ${PROJECT_NAME} ${PROJECT_NAME}_gencfg)
 
@@ -138,6 +139,7 @@ ${LIBS_ROS}
 add_executable (${PROJECT_NAME}_stereo
 ros/src/StereoNode.cc
 ros/src/Node.cc
+ros/src/MsgSynchronizer.cc
 )
 add_dependencies (${PROJECT_NAME}_stereo ${PROJECT_NAME} ${PROJECT_NAME}_gencfg)
 
@@ -148,6 +150,7 @@ ${LIBS_ROS}
 add_executable (${PROJECT_NAME}_rgbd
 ros/src/RGBDNode.cc
 ros/src/Node.cc
+ros/src/MsgSynchronizer.cc
 )
 add_dependencies (${PROJECT_NAME}_rgbd ${PROJECT_NAME} ${PROJECT_NAME}_gencfg)
 
