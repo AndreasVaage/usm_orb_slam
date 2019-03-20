@@ -51,6 +51,8 @@ class InertialMonoNode : public Node
     InertialMonoNode (ORB_SLAM2::System* pSLAM, ros::NodeHandle &node_handle, image_transport::ImageTransport &image_transport,ORB_SLAM2::ConfigParam &config);
     ~InertialMonoNode ();
     void MsgCallback (const sensor_msgs::ImageConstPtr& imgmsg,const std::vector<sensor_msgs::ImuConstPtr> &vimumsgs);
+    void ImageCallback(const sensor_msgs::ImageConstPtr& msg);
+    void ImuCallback(const sensor_msgs::ImuConstPtr& msg);
   private:
     const bool _bAccMultiply98;
     const double _imageMsgDelaySec;

@@ -22,13 +22,53 @@ int main(int argc, char **argv)
     image_transport::ImageTransport image_transport (node_handle);
 
     // Create visual inertial node. It setup subscribers for the IMU and image topics,
-    // syncronises the topics and forward them to the orb slam tracker.
+    // combine the messages in correct order and forward them to the orb slam tracker.
     // It also publish ros topics, and control the dynamic reconfigure.
-    InertialMonoNode node (&SLAM, node_handle, image_transport, config);
+    InertialMonoNode node(&SLAM, node_handle, image_transport, config);
 
 
-    ros::spin();
+    if (ORB_SLAM2::ConfigParam::GetRealTimeFlag()) {
 
+        ros::spin();
+
+    } else { // Process one message at a time
+
+        std::string bagfile = config._bagfile;
+        rosbag::Bag bag;
+        bag.open(bagfile, rosbag::bagmode::Read);
+
+        std::vector <std::string> topics;
+        std::string imutopic = config._imuTopic;
+        std::string imagetopic = config._imageTopic;
+        topics.push_back(imagetopic);
+        topics.push_back(imutopic);
+
+        rosbag::View view(bag, rosbag::TopicQuery(topics));
+
+        //while(ros::ok())
+        BOOST_FOREACH(rosbag::MessageInstance const m, view){
+            sensor_msgs::ImuConstPtr simu = m.instantiate<sensor_msgs::Imu>();
+            if (simu != nullptr)
+                node.ImuCallback(simu);
+            sensor_msgs::ImageConstPtr simage = m.instantiate<sensor_msgs::Image>();
+            if (simage != nullptr)
+                node.ImageCallback(simage);
+
+            // Wait local mapping end.
+            bool bstop = false;
+            while (!SLAM.bLocalMapAcceptKF()) {
+                if (!ros::ok()) {
+                    bstop = true;
+                }
+            }
+            if (bstop)
+                break;
+
+            ros::spinOnce();
+            if (!ros::ok())
+                break;
+        }
+    }
     // Stop all threads
     SLAM.Shutdown();
 
@@ -46,12 +86,16 @@ Node (pSLAM, node_handle, image_transport),
 _bAccMultiply98(config.GetAccMultiply9p8()),
 _imageMsgDelaySec(config.GetImageDelayToIMU()),
 _g(config.GetG()),
-_msg_synchronizer(_imageMsgDelaySec, std::bind(&InertialMonoNode::MsgCallback, this, std::placeholders::_1,std::placeholders::_2)){
+_msg_synchronizer(_imageMsgDelaySec, std::bind(&InertialMonoNode::MsgCallback, this, std::placeholders::_1,std::placeholders::_2)) {
+    if (config.GetRealTimeFlag()) {
+        _image_subscriber = image_transport.subscribe(config._imageTopic, 2,
+                                                      &orb_slam2_vio::MsgSynchronizer::imageCallback,
+                                                      &_msg_synchronizer);
+        _imu_subscriber = node_handle.subscribe(config._imuTopic, config._imuRate,
+                                                &orb_slam2_vio::MsgSynchronizer::imuCallback, &_msg_synchronizer);
 
-    _image_subscriber = image_transport.subscribe (config._imageTopic, 2, &orb_slam2_vio::MsgSynchronizer::imageCallback, &_msg_synchronizer);
-    _imu_subscriber = node_handle.subscribe(config._imuTopic, config._imuRate, &orb_slam2_vio::MsgSynchronizer::imuCallback, &_msg_synchronizer);
+    }
 }
-
 
 InertialMonoNode::~InertialMonoNode () = default;
 
@@ -94,4 +138,11 @@ void InertialMonoNode::MsgCallback (const sensor_msgs::ImageConstPtr& imgmsg,con
     orb_slam_->TrackMonoVI(cv_in_ptr->image,vimuData,cv_in_ptr->header.stamp.toSec()-_imageMsgDelaySec);
 
     Update ();
+}
+
+void InertialMonoNode::ImageCallback(const sensor_msgs::ImageConstPtr& msg){
+    _msg_synchronizer.imageCallback(msg);
+}
+void InertialMonoNode::ImuCallback(const sensor_msgs::ImuConstPtr& msg){
+    _msg_synchronizer.imuCallback(msg);
 }
