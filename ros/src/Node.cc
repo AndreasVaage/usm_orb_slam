@@ -6,6 +6,7 @@ Node::Node (ORB_SLAM2::System* pSLAM, ros::NodeHandle &node_handle, image_transp
   name_of_node_ = ros::this_node::getName();
   orb_slam_ = pSLAM;
   node_handle_ = node_handle;
+  min_observations_per_point_ = 2;
 
   //static parameters
   node_handle_.param(name_of_node_+"/publish_pointcloud", publish_pointcloud_param_, true);
@@ -71,8 +72,8 @@ tf::Transform Node::TransformFromMat (cv::Mat position_mat) {
   cv::Mat rotation(3,3,CV_32F);
   cv::Mat translation(3,1,CV_32F);
 
-  rotation = position_mat.rowRange(0,3).colRange(0,3).t();
-  translation = rotation*position_mat.rowRange(0,3).col(3);
+  rotation = position_mat.rowRange(0,3).colRange(0,3);
+  translation = position_mat.rowRange(0,3).col(3);
 
   tf::Matrix3x3 tf_camera_rotation (rotation.at<float> (0,0), rotation.at<float> (0,1), rotation.at<float> (0,2),
                                     rotation.at<float> (1,0), rotation.at<float> (1,1), rotation.at<float> (1,2),
@@ -81,29 +82,22 @@ tf::Transform Node::TransformFromMat (cv::Mat position_mat) {
 
   tf::Vector3 tf_camera_translation (translation.at<float> (0), translation.at<float> (1), translation.at<float> (2));
 
-  const tf::Matrix3x3 Rx (1, 0, 0,
-                          0, 0, -1,
-                          0, 1, 0);
+  //Coordinate transformation matrix from orb coordinate system to ros coordinate system
+  const tf::Matrix3x3 tf_orb_to_ros (0, 0, 1,
+                                    -1, 0, 0,
+                                     0,-1, 0);
 
-  const tf::Matrix3x3 Rz (0, -1, 0,
-                          1, 0, 0,
-                          0, 0, 1);
+  //Transform from orb coordinate system to ros coordinate system on camera coordinates
+  tf_camera_rotation = tf_orb_to_ros*tf_camera_rotation;
+  tf_camera_translation = tf_orb_to_ros*tf_camera_translation;
 
-  const tf::Matrix3x3 invX (-1, 0, 0,
-                            0, 1, 0,
-                            0, 0, 1);
+  //Inverse matrix
+  tf_camera_rotation = tf_camera_rotation.transpose();
+  tf_camera_translation = -(tf_camera_rotation*tf_camera_translation);
 
-  const tf::Matrix3x3 invYZ (1, 0, 0,
-                            0, -1, 0,
-                            0, 0, -1);
-
-  tf_camera_rotation = Rx*tf_camera_rotation;
-  tf_camera_rotation = Rz*tf_camera_rotation;
-  tf_camera_translation = Rx*tf_camera_translation;
-  tf_camera_translation = Rz*tf_camera_translation;
-
-  tf_camera_rotation = invYZ*tf_camera_rotation;
-  tf_camera_translation = invX*tf_camera_translation;
+  //Transform from orb coordinate system to ros coordinate system on map coordinates
+  tf_camera_rotation = tf_orb_to_ros*tf_camera_rotation;
+  tf_camera_translation = tf_orb_to_ros*tf_camera_translation;
 
   return tf::Transform (tf_camera_rotation, tf_camera_translation);
 }
@@ -142,7 +136,7 @@ sensor_msgs::PointCloud2 Node::MapPointsToPointCloud (std::vector<ORB_SLAM2::Map
 
   float data_array[3];
   for (unsigned int i=0; i<cloud.width; i++) {
-    if (!map_points.at(i)->isBad()) {
+    if (map_points.at(i)->nObs >= min_observations_per_point_) {//nObs isBad()
       data_array[0] = map_points.at(i)->GetWorldPos().at<float> (2); //x. Do the transformation by just reading at the position of z instead of x
       data_array[1] = -1.0* map_points.at(i)->GetWorldPos().at<float> (0); //y. Do the transformation by just reading at the position of x instead of y
       data_array[2] = -1.0* map_points.at(i)->GetWorldPos().at<float> (1); //z. Do the transformation by just reading at the position of y instead of z
@@ -158,6 +152,7 @@ sensor_msgs::PointCloud2 Node::MapPointsToPointCloud (std::vector<ORB_SLAM2::Map
 
 void Node::ParamsChangedCallback(orb_slam2_ros::dynamic_reconfigureConfig &config, uint32_t level) {
   orb_slam_->EnableLocalizationOnly (config.localize_only);
+  min_observations_per_point_ = config.min_observations_for_ros_map;
 
   if (config.reset_map) {
     orb_slam_->Reset();
