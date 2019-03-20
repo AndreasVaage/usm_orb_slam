@@ -1,12 +1,12 @@
 #include "MsgSynchronizer.h"
 #include "IMU/configparam.h"
 
-namespace ORBVIO
+namespace orb_slam2_vio
 {
 
-MsgSynchronizer::MsgSynchronizer(const double& imagedelay):
+MsgSynchronizer::MsgSynchronizer(const double& imagedelay,const msgCallback_t &msgCallback):
     _imageMsgDelaySec(imagedelay), _status(NOTINIT),
-    _dataUnsyncCnt(0)
+    _dataUnsyncCnt(0), _msgCallback(msgCallback)
 {
     printf("image delay set as %.1fms\n",_imageMsgDelaySec*1000);
 }
@@ -217,6 +217,14 @@ void MsgSynchronizer::addImageMsg(const sensor_msgs::ImageConstPtr &imgmsg)
 void MsgSynchronizer::imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
     addImageMsg(msg);
+    sensor_msgs::ImageConstPtr imageMsg;
+    std::vector<sensor_msgs::ImuConstPtr> vimuMsgs;
+
+
+    if (getRecentMsgs(imageMsg, vimuMsgs))
+    {
+        _msgCallback(imageMsg,vimuMsgs);
+    }
 }
 
 void MsgSynchronizer::imuCallback(const sensor_msgs::ImuConstPtr &msg)
