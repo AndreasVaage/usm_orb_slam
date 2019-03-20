@@ -21,6 +21,9 @@ int main(int argc, char **argv)
 
     image_transport::ImageTransport image_transport (node_handle);
 
+    // Create visual inertial node. It setup subscribers for the IMU and image topics,
+    // syncronises the topics and forward them to the orb slam tracker.
+    // It also publish ros topics, and control the dynamic reconfigure.
     InertialMonoNode node (&SLAM, node_handle, image_transport, config);
 
 
