@@ -72,6 +72,8 @@ We use [g2o](https://github.com/RainerKuemmerle/g2o) library to perform non-line
 To include newer updates and fixes g2o no longer ships with orb-slam, but are added as a build dependencie.
 Installation:
 ```
+sudo apt-get install libsuitesparse-dev
+
 git clone https://github.com/RainerKuemmerle/g2o.git
 
 mkdir g2o/build
