@@ -139,6 +139,7 @@ void System::TrackMonoVI(const cv::Mat &im, const std::vector<IMUData> &vimu, co
     mTrackedMapPoints = mpTracker->mCurrentFrame.mvpMapPoints;
     mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;
     current_position_ = Tcw;
+    current_velocity_ = mpTracker->mCurrentFrame.getV();
 }
 
 //-------------------------------------------------------------------------------------------
@@ -586,6 +587,9 @@ void System::SetMinimumKeyFrames (int min_num_kf) {
 
 cv::Mat System::GetCurrentPosition () {
   return current_position_;
+}
+Vector3d System::GetCurrentVelocity () {
+  return current_velocity_;
 }
 
 int System::GetTrackingState()

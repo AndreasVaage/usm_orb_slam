@@ -122,6 +122,8 @@ public:
 
     cv::Mat GetCurrentPosition ();
 
+    Vector3d GetCurrentVelocity ();
+
     // Information from most recent processed frame
     // You can call this right after TrackMonocular (or stereo or RGBD)
     int GetTrackingState();
@@ -189,6 +191,7 @@ private:
 
     // Current position
     cv::Mat current_position_;
+    Vector3d current_velocity_;
 };
 
 }// namespace ORB_SLAM

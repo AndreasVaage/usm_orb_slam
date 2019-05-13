@@ -69,6 +69,8 @@ public:
     Matrix<double,15,15> mMargCovInv;
     NavState mNavStatePrior;
 
+    Vector3d getV(){return mNavState.Get_V()};
+
 protected:
     NavState mNavState;
 
