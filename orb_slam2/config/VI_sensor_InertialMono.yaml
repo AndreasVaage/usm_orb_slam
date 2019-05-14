@@ -1,0 +1,131 @@
+%YAML:1.0
+
+# 1: realtime, 0: non-realtime
+test.RealTime: 1
+# Time for visual-inertial initialization
+test.VINSInitTime: 15.0
+
+# Modify test.InitVIOTmpPath and bagfile to the correct path
+# Path to save tmp files/results
+test.InitVIOTmpPath: "/home/andreas/ORBSLAM/results/"
+
+## For good initialization (no movement at the beginning for some bag)
+test.DiscardTime: 0
+#bagfile: "/home/jp/TimeV1_01_easy.bag"
+## bad: V1_03_difficult(wrong), V2_03_difficult(lost)
+## not so good(cant close loop without loopclosure): V1_02_medium, V2_02_medium, MH_05_difficult
+## good: V1_01_easy, V2_01_easy, MH_01_easy, MH_02_easy, MH_03_medium, MH_04_difficult
+
+#test.DiscardTime: 18
+#bagfile: "/media/jp/JingpangPassport/3dataset/EuRoC-VIO/un_restamped/MH_03_medium.bag"
+
+#bagfile: "/media/jp/JingpangPassport/3dataset/EuRoC-VIO/un_restamped/MH_04_difficult.bag"
+#bagfile: "/media/jp/JingpangPassport/3dataset/EuRoC-VIO/un_restamped/MH_05_difficult.bag"
+#bagfile: "/media/jp/JingpangPassport/3dataset/EuRoC-VIO/un_restamped/MH_02_easy.bag"
+#bagfile: "/media/jp/JingpangPassport/3dataset/EuRoC-VIO/un_restamped/MH_01_easy.bag"
+#bagfile: "/media/jp/JingpangPassport/3dataset/EuRoC-VIO/un_restamped/V2_02_medium.bag"
+#bagfile: "/media/jp/JingpangPassport/3dataset/EuRoC-VIO/un_restamped/V2_01_easy.bag"
+#bagfile: "/media/jp/JingpangPassport/3dataset/EuRoC-VIO/un_restamped/V1_02_medium.bag"
+#bagfile: "/media/jp/JingpangPassport/3dataset/EuRoC-VIO/un_restamped/V1_01_easy.bag"
+
+#bagfile: "/media/jp/JingpangPassport/3dataset/EuRoC-VIO/un_restamped/V1_03_difficult.bag"
+#bagfile: "/media/jp/JingpangPassport/3dataset/EuRoC-VIO/un_restamped/V2_03_difficult.bag"
+
+bagfile: "/media/andreas/SLAM_data/EuRoC/MH_01_easy.bag"
+
+#######################################
+
+imutopic: "/imu/data_raw"
+imagetopic: "/camera/left/image_raw"
+
+imu.rate: 125
+
+
+# Timestamp shift. Timage = Timu + image_delay
+Camera.delaytoimu: 0
+
+# acc=acc*9.8, if below is 1
+IMU.multiplyG: 0
+
+# camera-imu frame transformation, Pi = Tic * Pc
+#Camera.Tbc: # directly from kalibr
+#  [0.04623090692031362, -0.9976193583588203, 0.05116951312120399, -0.11838710987496917,
+#   0.002201324556893036, -0.05112241435818743, -0.9986899683687551, -0.0356510498418211,
+#   0.9989283544957168, 0.046282983675704825, -0.0001673515877479992, -0.039686625868313036,
+#   0.0, 0.0, 0.0, 1.0]
+Camera.Tbc: # inverted from kalibr
+  [0.04623090692031362, 0.0022013245568928, 0.9989283544957168681, 0.04519571886281155,
+  -0.997619358358820212, -0.05112241435818744, 0.046282983675704835557, -0.1180910248765329254,
+   0.051169513121203982276, -0.99868996836875504915, -0.00016735158774792263521, -0.029553176686563991534,
+   0, 0, 0, 1]
+
+# Local Window size
+
+LocalMapping.LocalWindowSize: 20
+
+#--------------------------------------------------------------------------------------------
+# Camera Parameters. Adjust them!
+#--------------------------------------------------------------------------------------------
+
+# Camera calibration and distortion parameters (OpenCV) 
+Camera.fx: 345.1266433503223
+Camera.fy: 344.9751177969842
+Camera.cx: 630.3091573525245
+Camera.cy: 489.4325343032079
+
+Camera.k1: 0.013618366139391377
+Camera.k2: -0.006055545745587804
+Camera.p1: 0.000188132244136002
+Camera.p2: 5.401631719790565e-05
+
+Camera.width: 1288
+Camera.height: 964
+
+# Camera frames per second 
+Camera.fps: 15.625
+
+# IR projector baseline times fx (aprox.)
+Camera.bf: 40.0
+
+# Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
+Camera.RGB: 1
+
+# Close/Far threshold. Baseline times.
+ThDepth: 40.0
+
+# Deptmap values factor
+DepthMapFactor: 1.0
+
+#--------------------------------------------------------------------------------------------
+# ORB Parameters
+#--------------------------------------------------------------------------------------------
+
+# ORB Extractor: Number of features per image
+ORBextractor.nFeatures: 1000
+
+# ORB Extractor: Scale factor between levels in the scale pyramid 
+ORBextractor.scaleFactor: 1.2
+
+# ORB Extractor: Number of levels in the scale pyramid 
+ORBextractor.nLevels: 8
+
+# ORB Extractor: Fast threshold
+# Image is divided in a grid. At each cell FAST are extracted imposing a minimum response.
+# Firstly we impose iniThFAST. If no corners are detected we impose a lower value minThFAST
+# You can lower these values if your images have low contrast   
+ORBextractor.iniThFAST: 20
+ORBextractor.minThFAST: 7
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters
+#--------------------------------------------------------------------------------------------
+Viewer.KeyFrameSize: 0.05
+Viewer.KeyFrameLineWidth: 1
+Viewer.GraphLineWidth: 0.9
+Viewer.PointSize: 2
+Viewer.CameraSize: 0.08
+Viewer.CameraLineWidth: 3
+Viewer.ViewpointX: 0
+Viewer.ViewpointY: -0.7
+Viewer.ViewpointZ: -1.8
+Viewer.ViewpointF: 500

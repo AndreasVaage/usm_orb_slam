@@ -1,0 +1,12 @@
+<launch>
+  <node name="orb_slam2_inertial_mono" pkg="orb_slam2_ros"
+      type="orb_slam2_ros_inertial_mono" args="
+          $(find orb_slam2_ros)/orb_slam2/Vocabulary/ORBvoc.txt
+          $(find orb_slam2_ros)/orb_slam2/config/VI_sensor_InertialMono.yaml"
+      output="screen">
+
+       <param name="publish_pointcloud" type="bool" value="false" />
+       <param name="pointcloud_frame_id" type="string" value="map" />
+       <param name="camera_frame_id" type="string" value="camera_link" />
+  </node>
+</launch>
