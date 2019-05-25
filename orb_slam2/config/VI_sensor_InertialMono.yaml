@@ -41,23 +41,18 @@ imagetopic: "/camera/left/image_raw"
 imu.rate: 125
 
 
-# Timestamp shift. Timage = Timu + image_delay
-Camera.delaytoimu: 0
+# Timestamp shift. Timage = Timu + image_delay  (kalibr: t_imu = t_cam + shift, shift = 0.0319080124429)
+Camera.delaytoimu: 0.0319080124429
 
 # acc=acc*9.8, if below is 1
 IMU.multiplyG: 0
 
 # camera-imu frame transformation, Pi = Tic * Pc
-#Camera.Tbc: # directly from kalibr
-#  [0.04623090692031362, -0.9976193583588203, 0.05116951312120399, -0.11838710987496917,
-#   0.002201324556893036, -0.05112241435818743, -0.9986899683687551, -0.0356510498418211,
-#   0.9989283544957168, 0.046282983675704825, -0.0001673515877479992, -0.039686625868313036,
-#   0.0, 0.0, 0.0, 1.0]
-Camera.Tbc: # inverted from kalibr
-  [0.04623090692031362, 0.0022013245568928, 0.9989283544957168681, 0.04519571886281155,
-  -0.997619358358820212, -0.05112241435818744, 0.046282983675704835557, -0.1180910248765329254,
-   0.051169513121203982276, -0.99868996836875504915, -0.00016735158774792263521, -0.029553176686563991534,
-   0, 0, 0, 1]
+Camera.Tbc:
+  [ 0.05320699, 0.00342051, 0.99857765, 0.05787374,
+   -0.99664398, -0.0621137, 0.05331672, -0.12266626,
+    0.06220772, -0.99806322, 0.00010415, -0.03068907,
+    0., 0., 0., 1.]
 
 # Local Window size
 
@@ -101,7 +96,7 @@ DepthMapFactor: 1.0
 #--------------------------------------------------------------------------------------------
 
 # ORB Extractor: Number of features per image
-ORBextractor.nFeatures: 1000
+ORBextractor.nFeatures: 2000
 
 # ORB Extractor: Scale factor between levels in the scale pyramid 
 ORBextractor.scaleFactor: 1.2
@@ -113,8 +108,8 @@ ORBextractor.nLevels: 8
 # Image is divided in a grid. At each cell FAST are extracted imposing a minimum response.
 # Firstly we impose iniThFAST. If no corners are detected we impose a lower value minThFAST
 # You can lower these values if your images have low contrast   
-ORBextractor.iniThFAST: 20
-ORBextractor.minThFAST: 7
+ORBextractor.iniThFAST: 15
+ORBextractor.minThFAST: 5
 
 #--------------------------------------------------------------------------------------------
 # Viewer Parameters
