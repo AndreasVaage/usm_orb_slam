@@ -51,6 +51,8 @@ public:
 
     void InsertKeyFrame(KeyFrame* pKF);
 
+    void AddBoundingBox(const double time_stamp,const std::vector<BoundingBox> &boxes);
+
     // Thread Synch
     void RequestStop();
     void RequestReset();
@@ -83,6 +85,8 @@ protected:
 
     void KeyFrameCulling();
 
+    void MapPointLabeling();
+
     cv::Mat ComputeF12(KeyFrame* &pKF1, KeyFrame* &pKF2);
 
     cv::Mat SkewSymmetricMatrix(const cv::Mat &v);
@@ -111,6 +115,10 @@ protected:
     std::list<MapPoint*> mlpRecentAddedMapPoints;
 
     std::mutex mMutexNewKFs;
+
+    std::vector<BoundingBox> mvNewBoundingBoxes;
+    double mTimeStampNewBoundingBoxes;
+    std::mutex mMutexNewBoundingBoxes;
 
     bool mbAbortBA;
 

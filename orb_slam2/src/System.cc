@@ -512,4 +512,19 @@ void System::EnableLocalizationOnly (bool localize_only) {
   }
 }
 
+void System::PublishKeyFrameImage(double time_stamp){
+  if(mstdfKeyframeCallback) {
+    mstdfKeyframeCallback(time_stamp);
+  }
+}
+
+void System::RegisterKeyFramePubisherCalback(std::function<void(double)> PublishKeyFrame){
+  mstdfKeyframeCallback = PublishKeyFrame;
+}
+
+void System::AddBoundingBox(const double time_stamp,const std::vector<BoundingBox> &boxes){
+  mpLocalMapper->AddBoundingBox(time_stamp,boxes);
+}
+
+
 } //namespace ORB_SLAM

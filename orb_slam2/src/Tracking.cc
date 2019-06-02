@@ -1060,6 +1060,8 @@ void Tracking::CreateNewKeyFrame()
     if(!mpLocalMapper->SetNotStop(true))
         return;
 
+    mpSystem->PublishKeyFrameImage(mCurrentFrame.mTimeStamp);
+
     KeyFrame* pKF = new KeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB);
 
     mpReferenceKF = pKF;

@@ -28,6 +28,18 @@ Node::Node (ORB_SLAM2::System* pSLAM, ros::NodeHandle &node_handle, image_transp
   if (publish_pose_param_) {
     pose_publisher_ = node_handle_.advertise<geometry_msgs::PoseStamped> (name_of_node_+"/pose", 1);
   }
+
+  // Subscribe to bouding boxes used for labeling MapPoints
+  if (label_map_) {
+    bounding_box_subscriber_ =
+        node_handle_.subscribe("/darknet_ros/bounding_boxes", 10,
+                               &Node::BoundingBoxesMsgCallback, this);
+    keyframe_pubisher_ =
+        image_transport.advertise(name_of_node_ + "/keyframe/image", 1);
+
+    //pSLAM->RegisterKeyFramePubisherCalback(&Node::PublishKeyframe);
+    pSLAM->RegisterKeyFramePubisherCalback(std::bind(&Node::PublishKeyframe, this,std::placeholders::_1));
+  }
 }
 
 
@@ -55,6 +67,40 @@ void Node::Update () {
 
 }
 
+void Node::BoundingBoxesMsgCallback(
+    const usm_msgs::BoundingBoxes::ConstPtr &msg)
+{
+  if ( msg->image_header.stamp.toSec() > previous_bounding_box_stamp_ + 0.001)
+  {
+
+    std::vector<ORB_SLAM2::BoundingBox> boxes;
+    for (const auto &box : msg->bounding_boxes)
+    {
+      boxes.push_back(ORB_SLAM2::BoundingBox(box));
+    }
+
+    previous_bounding_box_stamp_ = msg->image_header.stamp.toSec();
+    orb_slam_->AddBoundingBox(previous_bounding_box_stamp_,boxes);
+  }
+
+}
+
+void Node::PublishKeyframe(double time_stamp)
+{
+  for(auto it = previos_image_msgs_.begin(); it != previos_image_msgs_.end(); it++)    {
+    if ((*it) == nullptr)
+      continue;
+    sensor_msgs::ImageConstPtr pImgMsg = (*it);
+    double header_stamp = pImgMsg->header.stamp.toSec();
+    if(time_stamp -0.0001 <= header_stamp and header_stamp <= time_stamp +0.0001)
+    {
+      keyframe_pubisher_.publish(pImgMsg);
+      previos_image_msgs_.erase(previos_image_msgs_.begin(),it);
+      return;
+    }
+  }
+  ROS_WARN("ORB SLAM: No matching image to publish as keyframe");
+}
 
 void Node::PublishMapPoints (std::vector<ORB_SLAM2::MapPoint*> map_points) {
   sensor_msgs::PointCloud2 cloud = MapPointsToPointCloud (map_points);
@@ -128,7 +174,7 @@ sensor_msgs::PointCloud2 Node::MapPointsToPointCloud (std::vector<ORB_SLAM2::Map
 
   sensor_msgs::PointCloud2 cloud;
 
-  const int num_channels = 3; // x y z
+  const int num_channels = 6; // x y z
 
   cloud.header.stamp = current_frame_time_;
   cloud.header.frame_id = map_frame_id_param_;
@@ -140,7 +186,7 @@ sensor_msgs::PointCloud2 Node::MapPointsToPointCloud (std::vector<ORB_SLAM2::Map
   cloud.row_step = cloud.point_step * cloud.width;
   cloud.fields.resize(num_channels);
 
-  std::string channel_id[] = { "x", "y", "z"};
+  std::string channel_id[] = { "x", "y", "z","h","s","v"};
   for (int i = 0; i<num_channels; i++) {
   	cloud.fields[i].name = channel_id[i];
   	cloud.fields[i].offset = i * sizeof(float);
@@ -152,15 +198,32 @@ sensor_msgs::PointCloud2 Node::MapPointsToPointCloud (std::vector<ORB_SLAM2::Map
 
 	unsigned char *cloud_data_ptr = &(cloud.data[0]);
 
-  float data_array[3];
+  float data_array[6];
   for (unsigned int i=0; i<cloud.width; i++) {
     if (map_points.at(i)->nObs >= min_observations_per_point_) {//nObs isBad()
       data_array[0] = map_points.at(i)->GetWorldPos().at<float> (2); //x. Do the transformation by just reading at the position of z instead of x
       data_array[1] = -1.0* map_points.at(i)->GetWorldPos().at<float> (0); //y. Do the transformation by just reading at the position of x instead of y
       data_array[2] = -1.0* map_points.at(i)->GetWorldPos().at<float> (1); //z. Do the transformation by just reading at the position of y instead of z
       //TODO dont hack the transformation but have a central conversion function for MapPointsToPointCloud and TransformFromMat
-
-      memcpy(cloud_data_ptr+(i*cloud.point_step), data_array, 3*sizeof(float));
+      ORB_SLAM2::MapPointClassification classification = map_points.at(i)->GetClassification();
+      if (classification.classification == "background")
+      {
+        data_array[3] = 0.25; // hue
+      }
+      else if (classification.classification == "pipe")
+      {
+        data_array[3] = 0.5; // hue
+      }
+      else if (classification.classification == "docking station")
+      {
+        data_array[3] = 1.0; // hue
+      } else
+      {
+        data_array[3] = 0.0; // hue
+      }
+      data_array[4] = 1.0; // saturation
+      data_array[5] = classification.percentage; // value.
+      memcpy(cloud_data_ptr+(i*cloud.point_step), data_array, 6*sizeof(float));
     }
   }
 

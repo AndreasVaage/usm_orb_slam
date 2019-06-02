@@ -38,6 +38,9 @@
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <geometry_msgs/PoseStamped.h>
+#include "usm_msgs/BoundingBoxes.h"
+#include "BoundingBox.h"
+#include <sensor_msgs/Image.h>
 
 #include "System.h"
 
@@ -55,11 +58,15 @@ class Node
 
     ros::Time current_frame_time_;
 
+    // Store incoming images, for later to publish as keyframes for object detection
+    std::vector<sensor_msgs::ImageConstPtr> previos_image_msgs_;
+
   private:
     void PublishMapPoints (std::vector<ORB_SLAM2::MapPoint*> map_points);
     void PublishPositionAsTransform (cv::Mat position);
     void PublishPositionAsPoseStamped(cv::Mat position);
     void PublishRenderedImage (cv::Mat image);
+    void PublishKeyframe(double time_stamp);
     void ParamsChangedCallback(orb_slam2_ros::dynamic_reconfigureConfig &config, uint32_t level);
     tf::Transform TransformFromMat (cv::Mat position_mat);
     sensor_msgs::PointCloud2 MapPointsToPointCloud (std::vector<ORB_SLAM2::MapPoint*> map_points);
@@ -70,6 +77,13 @@ class Node
     ros::Publisher map_points_publisher_;
     ros::Publisher pose_publisher_;
 
+    image_transport::Publisher keyframe_pubisher_;
+
+    ros::Subscriber bounding_box_subscriber_;
+    void BoundingBoxesMsgCallback(const usm_msgs::BoundingBoxes::ConstPtr &msg);
+    double previous_bounding_box_stamp_;
+
+
     std::string name_of_node_;
     ros::NodeHandle node_handle_;
 
@@ -77,6 +91,7 @@ class Node
     std::string camera_frame_id_param_;
     bool publish_pointcloud_param_;
     bool publish_pose_param_;
+    bool label_map_  = true;
     int min_observations_per_point_;
 };
 

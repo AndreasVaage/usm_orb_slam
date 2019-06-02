@@ -285,6 +285,54 @@ MapPoint* KeyFrame::GetMapPoint(const size_t &idx)
     unique_lock<mutex> lock(mMutexFeatures);
     return mvpMapPoints[idx];
 }
+bool KeyFrame::AddBoundingBoxes(const std::vector<BoundingBox> &boxes)
+{
+  if(mvObjectBoundingBoxes.empty())
+  {
+    mvObjectBoundingBoxes = boxes;
+    return true;
+  }
+  return false;
+}
+
+void KeyFrame::LabelMapPoints()
+{
+  // TODO: Fix mutex for current keyframe and mappoints
+  // Get Map Mutex
+  //unique_lock<mutex> lock(pMap->mMutexMapUpdate); // localBA in optimizer before updating map
+  //unique_lock<mutex> lock(mMutexMap);
+  // Get Map Mutex -> Map cannot be changed
+  //unique_lock<mutex> lock(mpMap->mMutexMapUpdate); // beginning of tracking
+
+  unique_lock<mutex> lock(mMutexFeatures);
+  assert(mvKeys.size() == mvpMapPoints.size());
+
+  for(size_t i=0, iend=mvpMapPoints.size(); i<iend; i++)
+  {
+    if(!mvpMapPoints[i])
+      continue;
+    MapPoint* pMP = mvpMapPoints[i];
+    if(pMP->isBad())
+      continue;
+    cv::Point2f pt = mvKeysUn[i].pt;
+
+    string classification;
+    float score;
+    bool wasClassified = false;
+    for(const auto &box : mvObjectBoundingBoxes)
+    {
+      if (box.ContainsPoint(pt.x,pt.y,classification,score))
+      {
+        pMP->mClassificationScores.AddClassification(classification);
+        wasClassified = true;
+      }
+    }
+    if (!wasClassified)
+    {
+      pMP->mClassificationScores.AddClassification("background");
+    }
+  }
+}
 
 void KeyFrame::UpdateConnections()
 {

@@ -24,6 +24,7 @@
 #include"KeyFrame.h"
 #include"Frame.h"
 #include"Map.h"
+#include "ObjectDetectionClasses.h"
 
 #include<opencv2/core/core.hpp>
 #include<mutex>
@@ -50,8 +51,10 @@ public:
 
     std::map<KeyFrame*,size_t> GetObservations();
     int Observations();
+    MapPointClassification GetClassification();
 
     void AddObservation(KeyFrame* pKF,size_t idx);
+    void AddObservation(KeyFrame* pKF,size_t idx, const string &classification);
     void EraseObservation(KeyFrame* pKF);
 
     int GetIndexInKeyFrame(KeyFrame* pKF);
@@ -87,6 +90,7 @@ public:
     long int mnFirstKFid;
     long int mnFirstFrame;
     int nObs;
+    ObjectDetectionClasses mClassificationScores;
 
     // Variables used by the tracking
     float mTrackProjX;

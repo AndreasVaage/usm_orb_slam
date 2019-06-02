@@ -24,9 +24,10 @@
 
 #include<string>
 #include<thread>
-#include <unistd.h>
+#include<unistd.h>
 #include<opencv2/core/core.hpp>
 
+//#include "Node.h"
 #include "Tracking.h"
 #include "FrameDrawer.h"
 #include "Map.h"
@@ -34,6 +35,7 @@
 #include "LoopClosing.h"
 #include "KeyFrameDatabase.h"
 #include "ORBVocabulary.h"
+#include "BoundingBox.h"
 
 namespace ORB_SLAM2
 {
@@ -107,6 +109,13 @@ public:
     //Checks the current mode (mapping or localization) and changes the mode if requested
     void EnableLocalizationOnly (bool localize_only);
 
+    //Publish keyframe
+    void PublishKeyFrameImage(double time_stamp);
+
+    void RegisterKeyFramePubisherCalback(std::function<void(double)> PublishKeyFrame);
+
+    void AddBoundingBox(const double time_stamp,const std::vector<BoundingBox> &boxes);
+
     // TODO: Save/Load functions
     // SaveMap(const string &filename);
     // LoadMap(const string &filename);
@@ -164,6 +173,11 @@ private:
     // The Tracking thread "lives" in the main execution thread that creates the System object.
     std::thread* mptLocalMapping;
     std::thread* mptLoopClosing;
+
+    // Callback function to the main execution thread,
+    // which is a ros node.
+    // Used to publish new keyframes.
+    std::function<void(double)> mstdfKeyframeCallback;
 
     // Reset flag
     std::mutex mMutexReset;

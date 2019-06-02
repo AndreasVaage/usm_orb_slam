@@ -84,6 +84,10 @@ void LocalMapping::Run()
                 KeyFrameCulling();
             }
 
+            // Lable points visible in current keyframe,
+            // using bounding boxes from ROS
+            MapPointLabeling();
+
             mpLoopCloser->InsertKeyFrame(mpCurrentKeyFrame);
         }
         else if(Stop())
@@ -693,6 +697,33 @@ void LocalMapping::KeyFrameCulling()
         if(nRedundantObservations>0.9*nMPs)
             pKF->SetBadFlag();
     }
+}
+void LocalMapping::AddBoundingBox(const double time_stamp,const std::vector<BoundingBox> &boxes)
+{
+  unique_lock<mutex> lock(mMutexNewBoundingBoxes);
+  mTimeStampNewBoundingBoxes = time_stamp;
+  mvNewBoundingBoxes = boxes;
+}
+
+void LocalMapping::MapPointLabeling()
+{
+  // TODO: Fix mutex for current keyframe and mappoints
+  // Get Map Mutex
+  //unique_lock<mutex> lock(pMap->mMutexMapUpdate); // localBA in optimizer before updating map
+  //unique_lock<mutex> lock(mMutexMap);
+//
+  //// Get Map Mutex -> Map cannot be changed
+  //unique_lock<mutex> lock(mpMap->mMutexMapUpdate); // beginning of tracking
+
+  unique_lock<mutex> lock(mMutexNewBoundingBoxes);
+  if (mTimeStampNewBoundingBoxes -0.001 <= mpCurrentKeyFrame->mTimeStamp and mpCurrentKeyFrame->mTimeStamp <= mTimeStampNewBoundingBoxes + 0.001)
+  {
+    mpCurrentKeyFrame->AddBoundingBoxes(mvNewBoundingBoxes);
+    mpCurrentKeyFrame->LabelMapPoints();
+  } else
+  {
+    std::cerr<<"LocalMapping: No new matching bounding box"<<std::endl;
+  }
 }
 
 cv::Mat LocalMapping::SkewSymmetricMatrix(const cv::Mat &v)

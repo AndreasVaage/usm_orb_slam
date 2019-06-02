@@ -108,6 +108,21 @@ void MapPoint::AddObservation(KeyFrame* pKF, size_t idx)
         nObs++;
 }
 
+void MapPoint::AddObservation(KeyFrame* pKF,size_t idx, const string &classification)
+{
+  unique_lock<mutex> lock(mMutexFeatures);
+  if(mObservations.count(pKF))
+    return;
+  mObservations[pKF]=idx;
+
+  if(pKF->mvuRight[idx]>=0)
+    nObs+=2;
+  else
+    nObs++;
+
+  mClassificationScores.AddClassification(classification);
+}
+
 void MapPoint::EraseObservation(KeyFrame* pKF)
 {
     bool bBad=false;
@@ -146,6 +161,12 @@ int MapPoint::Observations()
 {
     unique_lock<mutex> lock(mMutexFeatures);
     return nObs;
+}
+
+MapPointClassification MapPoint::GetClassification()
+{
+  unique_lock<mutex> lock(mMutexFeatures);
+  return mClassificationScores.GetBestClassification();
 }
 
 void MapPoint::SetBadFlag()

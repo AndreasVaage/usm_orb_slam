@@ -28,6 +28,7 @@
 #include "ORBextractor.h"
 #include "Frame.h"
 #include "KeyFrameDatabase.h"
+#include "BoundingBox.h"
 
 #include <mutex>
 
@@ -90,6 +91,11 @@ public:
     int TrackedMapPoints(const int &minObs);
     MapPoint* GetMapPoint(const size_t &idx);
 
+
+    bool AddBoundingBoxes(const std::vector<BoundingBox> &boxes);
+    // MapPoint Labeling function
+    void LabelMapPoints();
+
     // KeyPoint functions
     std::vector<size_t> GetFeaturesInArea(const float &x, const float  &y, const float  &r) const;
     cv::Mat UnprojectStereo(int i);
@@ -147,6 +153,9 @@ public:
     long unsigned int mnRelocQuery;
     int mnRelocWords;
     float mRelocScore;
+
+    // Variables used for classification labeling
+    std::vector<BoundingBox> mvObjectBoundingBoxes;
 
     // Variables used by loop closing
     cv::Mat mTcwGBA;
@@ -222,7 +231,7 @@ protected:
     // Bad flags
     bool mbNotErase;
     bool mbToBeErased;
-    bool mbBad;    
+    bool mbBad;
 
     float mHalfBaseline; // Only for visualization
 

@@ -25,6 +25,7 @@ image_transport
 tf
 sensor_msgs
 dynamic_reconfigure
+usm_msgs
 )
 
 find_package(OpenCV 3.0 QUIET)

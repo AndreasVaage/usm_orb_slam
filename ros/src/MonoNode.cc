@@ -50,6 +50,7 @@ void MonoNode::ImageCallback (const sensor_msgs::ImageConstPtr& msg) {
       ROS_ERROR("cv_bridge exception: %s", e.what());
       return;
   }
+  previos_image_msgs_.push_back(msg);
 
   current_frame_time_ = msg->header.stamp;
 
