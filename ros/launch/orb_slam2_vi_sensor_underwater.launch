@@ -1,4 +1,16 @@
 <launch>
+
+  <rosparam command="load" file="/media/andreas/SLAM_data/vi-sensor/1juni/camcam_cal_results/camchain-camcam_cal_half_res_2019-06-01-13-44-19.yaml"/>
+  <node name="kalibr_undistort" pkg="image_undistort" type="stereo_undistort_node">
+
+    <param name="input_camera_info_from_ros_params" value="true"/>
+    <param name="first_camera_namespace" value="/cam0"/>
+    <param name="second_camera_namespace" value="/cam1"/>
+    <param name="output_image_type" value="bgr8"/>
+    <remap from="raw/first/image" to="/camera/left/image_raw"/>
+    <remap from="raw/second/image" to="/camera/right/image_raw"/>
+  </node>
+
   <node name="orb_slam2_mono" pkg="orb_slam2_ros"
       type="orb_slam2_ros_mono" args="
           $(find orb_slam2_ros)/orb_slam2/Vocabulary/ORBvoc.txt

@@ -314,7 +314,7 @@ void KeyFrame::LabelMapPoints()
     MapPoint* pMP = mvpMapPoints[i];
     if(pMP->isBad())
       continue;
-    cv::Point2f pt = mvKeysUn[i].pt;
+    cv::Point2f pt = mvKeys[i].pt;
 
     string classification;
     float score;

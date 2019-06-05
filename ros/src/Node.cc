@@ -70,15 +70,14 @@ void Node::Update () {
 void Node::BoundingBoxesMsgCallback(
     const usm_msgs::BoundingBoxes::ConstPtr &msg)
 {
-  if ( msg->image_header.stamp.toSec() > previous_bounding_box_stamp_ + 0.001)
-  {
+  if (msg->image_header.stamp.toSec() > previous_bounding_box_stamp_ + 0.001 or
+      msg->image_header.stamp.toSec() < previous_bounding_box_stamp_ - 0.001) {
 
     std::vector<ORB_SLAM2::BoundingBox> boxes;
     for (const auto &box : msg->bounding_boxes)
     {
       boxes.push_back(ORB_SLAM2::BoundingBox(box));
     }
-
     previous_bounding_box_stamp_ = msg->image_header.stamp.toSec();
     orb_slam_->AddBoundingBox(previous_bounding_box_stamp_,boxes);
   }
@@ -216,9 +215,10 @@ sensor_msgs::PointCloud2 Node::MapPointsToPointCloud (std::vector<ORB_SLAM2::Map
       }
       else if (classification.classification == "docking station")
       {
+        data_array[3] = 0.75; // hue
+      } else if (classification.classification == "pipe junction") {
         data_array[3] = 1.0; // hue
-      } else
-      {
+      } else {
         data_array[3] = 0.0; // hue
       }
       data_array[4] = 1.0; // saturation

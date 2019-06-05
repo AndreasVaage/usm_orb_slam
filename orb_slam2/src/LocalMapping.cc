@@ -722,7 +722,10 @@ void LocalMapping::MapPointLabeling()
     mpCurrentKeyFrame->LabelMapPoints();
   } else
   {
-    std::cerr<<"LocalMapping: No new matching bounding box"<<std::endl;
+    std::cerr << "LocalMapping: No mach. Current time: " << std::fixed
+              << mpCurrentKeyFrame->mTimeStamp
+              << "\n, \t\t\t bb: " << std::fixed << mTimeStampNewBoundingBoxes
+              << std::endl;
   }
 }
 
