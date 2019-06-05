@@ -106,19 +106,38 @@ void MapPoint::AddObservation(KeyFrame* pKF, size_t idx)
         nObs+=2;
     else
         nObs++;
+
+    AddClassification(pKF, idx);
 }
 
-void MapPoint::AddObservation(KeyFrame* pKF,size_t idx, const string &classification)
-{
+void MapPoint::AddClassification(KeyFrame *pKF, size_t idx) {
   unique_lock<mutex> lock(mMutexFeatures);
-  if(mObservations.count(pKF))
+  if (mClassifications.count(pKF))
     return;
-  mObservations[pKF]=idx;
+  mClassifications[pKF] = idx;
 
-  if(pKF->mvuRight[idx]>=0)
-    nObs+=2;
-  else
-    nObs++;
+  cv::Point2f pt = pKF->mvKeys[idx].pt;
+  string classification;
+  float score;
+  bool wasClassified = false;
+  for (const auto &box : pKF->mvObjectBoundingBoxes) {
+    if (box.ContainsPoint(pt.x, pt.y, classification, score)) {
+      mClassificationScores.AddClassification(classification);
+      wasClassified = true;
+    }
+  }
+  if (!wasClassified) {
+    mClassificationScores.AddClassification("background");
+  }
+  mClassificationScores.AddClassification(classification);
+}
+
+void MapPoint::AddClassification(KeyFrame *pKF, size_t idx,
+                                 const string &classification) {
+  unique_lock<mutex> lock(mMutexFeatures);
+  if (mClassifications.count(pKF))
+    return;
+  mClassifications[pKF] = idx;
 
   mClassificationScores.AddClassification(classification);
 }

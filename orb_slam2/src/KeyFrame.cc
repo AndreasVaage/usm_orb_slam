@@ -323,13 +323,13 @@ void KeyFrame::LabelMapPoints()
     {
       if (box.ContainsPoint(pt.x,pt.y,classification,score))
       {
-        pMP->mClassificationScores.AddClassification(classification);
+        pMP->AddClassification(this, i, classification);
         wasClassified = true;
       }
     }
     if (!wasClassified)
     {
-      pMP->mClassificationScores.AddClassification("background");
+      pMP->AddClassification(this, i, "background");
     }
   }
 }

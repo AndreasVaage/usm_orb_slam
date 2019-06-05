@@ -54,7 +54,9 @@ public:
     MapPointClassification GetClassification();
 
     void AddObservation(KeyFrame* pKF,size_t idx);
-    void AddObservation(KeyFrame* pKF,size_t idx, const string &classification);
+    void AddClassification(KeyFrame *pKF, size_t idx);
+    void AddClassification(KeyFrame *pKF, size_t idx,
+                           const string &classification);
     void EraseObservation(KeyFrame* pKF);
 
     int GetIndexInKeyFrame(KeyFrame* pKF);
@@ -123,6 +125,8 @@ protected:
 
      // Keyframes observing the point and associated index in keyframe
      std::map<KeyFrame*,size_t> mObservations;
+
+     std::map<KeyFrame *, size_t> mClassifications;
 
      // Mean viewing direction
      cv::Mat mNormalVector;
