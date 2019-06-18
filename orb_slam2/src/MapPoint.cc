@@ -111,7 +111,8 @@ void MapPoint::AddObservation(KeyFrame* pKF, size_t idx)
 }
 
 void MapPoint::AddClassification(KeyFrame *pKF, size_t idx) {
-  unique_lock<mutex> lock(mMutexFeatures);
+  if (pKF->mvObjectBoundingBoxes.empty())
+    return;
   if (mClassifications.count(pKF))
     return;
   mClassifications[pKF] = idx;

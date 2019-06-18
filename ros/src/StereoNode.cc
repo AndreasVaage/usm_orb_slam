@@ -65,6 +65,8 @@ void StereoNode::ImageCallback (const sensor_msgs::ImageConstPtr& msgLeft, const
       ROS_ERROR("cv_bridge exception: %s", e.what());
       return;
   }
+  previos_image_msgs_.push_back(msgLeft);
+  //std::cout<<" stereo node: 69"<<std::endl;
 
   current_frame_time_ = msgLeft->header.stamp;
 
